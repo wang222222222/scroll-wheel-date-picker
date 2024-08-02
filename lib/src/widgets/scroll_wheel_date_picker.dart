@@ -10,6 +10,12 @@ import '../date_controller.dart';
 import 'curve_scroll_wheel.dart';
 import 'flat_scroll_wheel.dart';
 
+enum DateComponent {
+  year,
+  month,
+  day,
+}
+
 class ScrollWheelDatePicker extends StatefulWidget {
   /// A scroll wheel date picker that has two types:
   ///
@@ -28,6 +34,11 @@ class ScrollWheelDatePicker extends StatefulWidget {
     required this.theme,
     this.listenAfterAnimation = true,
     this.scrollBehavior,
+    this.order = const [
+      DateComponent.year,
+      DateComponent.month,
+      DateComponent.day,
+    ],
   });
 
   /// The initial date for the [ScrollWheelDatePicker]. Defaults to [DateTime.now].
@@ -65,6 +76,9 @@ class ScrollWheelDatePicker extends StatefulWidget {
 
   /// Describes how [Scrollable] widgets should behave.
   final ScrollBehavior? scrollBehavior;
+
+  /// config the order of the date components.
+  final List<DateComponent> order;
 
   @override
   State<ScrollWheelDatePicker> createState() => _ScrollWheelDatePickerState();
@@ -175,6 +189,73 @@ class _ScrollWheelDatePickerState extends State<ScrollWheelDatePicker> {
     }
   }
 
+  Widget _yearWidget() {
+    return Expanded(
+      child: _scrollWidget(
+        controller: _dateController.yearController,
+        controllerItemChanged: (value) {
+          _dateController.changeYear(year: value);
+          widget.onSelectedItemChanged?.call(_dateController.dateTime);
+        },
+        looping: widget.loopYears,
+      ),
+    );
+  }
+
+  Widget _monthWidget() {
+    return Expanded(
+      child: ListenableBuilder(
+        listenable: _dateController,
+        builder: (_, __) {
+          return _scrollWidget(
+            controller: _dateController.monthController,
+            controllerItemChanged: (value) {
+              _dateController.changeMonth(month: value);
+              widget.onSelectedItemChanged?.call(_dateController.dateTime);
+            },
+            looping: widget.loopMonths,
+            startOffset: _dateController.startMonth,
+            lastOffset: _dateController.lastMonth,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _dayWidget() {
+    return Expanded(
+      child: ListenableBuilder(
+        listenable: _dateController,
+        builder: (_, __) {
+          return _scrollWidget(
+            controller: _dateController.dayController,
+            controllerItemChanged: (value) {
+              _dateController.changeDay(day: value);
+              widget.onSelectedItemChanged?.call(_dateController.dateTime);
+            },
+            looping: widget.loopDays,
+            startOffset: _dateController.startDay,
+            lastOffset: _dateController.lastDay,
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _orderedDateComponents() {
+    // Create a map of date components to their corresponding widgets
+    Map<DateComponent, Widget> dateComponentWidgets = {
+      DateComponent.year: _yearWidget(),
+      DateComponent.month: _monthWidget(),
+      DateComponent.day: _dayWidget(),
+    };
+
+    // Map the order parameter to a list of widgets
+    return widget.order
+        .map((component) => dateComponentWidgets[component]!)
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -203,58 +284,7 @@ class _ScrollWheelDatePickerState extends State<ScrollWheelDatePicker> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                //Years
-                Expanded(
-                  child: _scrollWidget(
-                    controller: _dateController.yearController,
-                    controllerItemChanged: (value) {
-                      _dateController.changeYear(year: value);
-                      widget.onSelectedItemChanged
-                          ?.call(_dateController.dateTime);
-                    },
-                    looping: widget.loopYears,
-                  ),
-                ),
-
-                // Months
-                Expanded(
-                  child: ListenableBuilder(
-                    listenable: _dateController,
-                    builder: (_, __) {
-                      return _scrollWidget(
-                        controller: _dateController.monthController,
-                        controllerItemChanged: (value) {
-                          _dateController.changeMonth(month: value);
-                          widget.onSelectedItemChanged
-                              ?.call(_dateController.dateTime);
-                        },
-                        looping: widget.loopMonths,
-                        startOffset: _dateController.startMonth,
-                        lastOffset: _dateController.lastMonth,
-                      );
-                    },
-                  ),
-                ),
-
-                // Days
-                Expanded(
-                  child: ListenableBuilder(
-                    listenable: _dateController,
-                    builder: (_, __) {
-                      return _scrollWidget(
-                        controller: _dateController.dayController,
-                        controllerItemChanged: (value) {
-                          _dateController.changeDay(day: value);
-                          widget.onSelectedItemChanged
-                              ?.call(_dateController.dateTime);
-                        },
-                        looping: widget.loopDays,
-                        startOffset: _dateController.startDay,
-                        lastOffset: _dateController.lastDay,
-                      );
-                    },
-                  ),
-                ),
+                ..._orderedDateComponents(),
               ],
             ),
           ),
